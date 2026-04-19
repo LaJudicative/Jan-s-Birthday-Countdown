@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Countdown</title>
 
-  <!-- Schreibmaschinen-Font -->
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
 
   <style>
@@ -19,13 +18,11 @@
       font-family: Arial, sans-serif;
     }
 
-    /* Vor dem Wechsel */
     .before {
       background-color: black;
       color: white;
     }
 
-    /* Nach dem Wechsel */
     .after {
       background-color: #6b7c8f;
       color: #0b2a4a;
@@ -35,8 +32,8 @@
       font-family: 'Special Elite', monospace;
       font-size: 2em;
       border-right: 2px solid;
-      white-space: nowrap;
-      overflow: hidden;
+      
+      white-space: pre-wrap; /* 👈 Fix für Leerzeichen + Zeilenumbrüche */
     }
 
     #counter {
@@ -51,35 +48,37 @@
 <h1 id="headline"></h1>
 <div id="counter"></div>
 
-<!-- Sound -->
 <audio id="typeSound" src="https://www.soundjay.com/mechanical/typewriter-key-1.mp3" preload="auto"></audio>
 
 <script>
   const targetDate = new Date("April 21, 2026 00:00:00").getTime();
 
-  const textBefore = "Etwas passiert bald...";
-  const textAfter = "Es ist soweit.";
+  const textBefore = `Und jedes Jahr wieder die Frage:
+Wann hat der Jan denn Geburtstag?`;
+
+  const textAfter = `Ich glaube, jetzt hat er.
+Happy Birthday, Jan!`;
 
   let charIndex = 0;
   let soundEnabled = false;
 
   const sound = document.getElementById("typeSound");
 
-  // Sound erst nach Klick aktivieren
   document.body.addEventListener("click", () => {
     soundEnabled = true;
   }, { once: true });
 
   function typeWriter(text) {
     const el = document.getElementById("headline");
-    el.innerText = "";
+    el.textContent = "";
     charIndex = 0;
 
     function getRandomDelay(char) {
-      let base = Math.random() * 70 + 40; // 40–110ms
+      let base = Math.random() * 70 + 40;
 
       if (char === " ") base += 30;
       if ([".", "!", "?"].includes(char)) base += 180;
+      if (char === "\n") base += 250;
 
       return base;
     }
@@ -99,7 +98,7 @@
       if (charIndex < text.length) {
         const char = text.charAt(charIndex);
 
-        el.innerText += char;
+        el.textContent += char;
         playSoundVariant();
 
         charIndex++;
@@ -107,11 +106,9 @@
       }
     }
 
-    // kleine Startverzögerung
     setTimeout(type, 200 + Math.random() * 300);
   }
 
-  // Initialer Text
   typeWriter(textBefore);
 
   const interval = setInterval(() => {
@@ -125,7 +122,7 @@
       document.body.classList.add("after");
 
       typeWriter(textAfter);
-      document.getElementById("counter").innerText = "00:00:00";
+      document.getElementById("counter").textContent = "00:00:00";
       return;
     }
 
@@ -133,7 +130,7 @@
     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-    document.getElementById("counter").innerText =
+    document.getElementById("counter").textContent =
       `${hours}h ${minutes}m ${seconds}s`;
   }, 1000);
 </script>
