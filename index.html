@@ -19,15 +19,8 @@
       transition: all 1s ease;
     }
 
-    .before {
-      background-color: black;
-      color: white;
-    }
-
-    .after {
-      background-color: #6b7c8f;
-      color: #0b2a4a;
-    }
+    .before { background: black; color: white; }
+    .after { background: #6b7c8f; color: #0b2a4a; }
 
     #headline {
       font-family: 'Special Elite', monospace;
@@ -35,6 +28,8 @@
       border-right: 2px solid;
       white-space: pre-wrap;
       z-index: 2;
+      text-align: center;
+      padding: 0 10px;
     }
 
     #counter {
@@ -51,25 +46,34 @@
       z-index: 1;
     }
 
-    /* BOOT SCREEN */
+    /* 🔧 BOOT SCREEN MOBILE FIX */
     #startOverlay {
       position: fixed;
       inset: 0;
       background: black;
       color: #00ff99;
       font-family: monospace;
-      padding: 40px;
+      padding: 20px;
       z-index: 20;
       display: flex;
       flex-direction: column;
       justify-content: center;
       gap: 10px;
       cursor: pointer;
+      font-size: 14px;
+    }
+
+    /* 📱 Mobile größer */
+    @media (max-width: 600px) {
+      #startOverlay {
+        font-size: 16px;
+        padding: 30px;
+      }
     }
 
     .bootLine {
       opacity: 0;
-      animation: fadeIn 0.6s forwards;
+      animation: fadeIn 0.5s forwards;
     }
 
     @keyframes fadeIn {
@@ -104,18 +108,28 @@ Happy Birthday, Jan!`;
   const sound = document.getElementById("typeSound");
   const overlay = document.getElementById("startOverlay");
 
-  const params = new URLSearchParams(window.location.search);
-  const preview = params.get("preview");
+  const preview = new URLSearchParams(window.location.search).get("preview");
 
   // -----------------------------
-  // BOOT SCREEN (RANDOMIZED)
+  // 🔊 AUDIO FIX (IMPORTANT)
+  // -----------------------------
+  function unlockAudio() {
+    // Trick: einmal still abspielen → aktiviert Audio auf iOS/Android
+    sound.volume = 0;
+    sound.play().catch(() => {});
+    sound.pause();
+    sound.currentTime = 0;
+    sound.volume = 1;
+  }
+
+  // -----------------------------
+  // BOOT (MOBILE FRIENDLY)
   // -----------------------------
   const bootLines = [
     "Booting system...",
-    "Loading birthday module...",
-    "Checking timeline integrity...",
-    "Calibrating memory...",
-    "Final checks..."
+    "Loading module...",
+    "Checking timeline...",
+    "Ready."
   ];
 
   function buildBootScreen() {
@@ -123,28 +137,24 @@ Happy Birthday, Jan!`;
 
     let delay = 0;
 
-    bootLines.forEach((line) => {
+    bootLines.forEach(line => {
       const div = document.createElement("div");
       div.className = "bootLine";
       div.textContent = line;
 
-      const randomDelay = delay + Math.random() * 600;
-      div.style.animationDelay = `${randomDelay}ms`;
-
-      delay += 600 + Math.random() * 800;
+      delay += 700 + Math.random() * 700;
+      div.style.animationDelay = `${delay}ms`;
 
       overlay.appendChild(div);
     });
 
-    // "Click to continue" mit Zufallsverzögerung
-    const clickLine = document.createElement("div");
-    clickLine.className = "bootLine";
-    clickLine.textContent = "👉 Click to continue";
-    clickLine.style.color = "white";
+    const click = document.createElement("div");
+    click.className = "bootLine";
+    click.textContent = "👉 Tap to continue";
+    click.style.color = "white";
+    click.style.animationDelay = `${delay + 1000}ms`;
 
-    clickLine.style.animationDelay = `${delay + 800 + Math.random() * 1200}ms`;
-
-    overlay.appendChild(clickLine);
+    overlay.appendChild(click);
   }
 
   buildBootScreen();
@@ -154,6 +164,7 @@ Happy Birthday, Jan!`;
   // -----------------------------
   overlay.addEventListener("click", () => {
     soundEnabled = true;
+    unlockAudio(); // 🔊 FIX AUDIO DELAY
     overlay.style.display = "none";
     checkInitialState();
   }, { once: true });
@@ -194,30 +205,30 @@ Happy Birthday, Jan!`;
   }
 
   // -----------------------------
-  // TYPEWRITER (SLOW)
+  // TYPEWRITER (SLOW + RELIABLE SOUND)
   // -----------------------------
   function typeWriter(text) {
     const el = document.getElementById("headline");
     el.textContent = "";
     charIndex = 0;
 
-    function getRandomDelay(char) {
-      let base = Math.random() * 120 + 90; // bewusst langsamer
+    function getDelay(char) {
+      let base = Math.random() * 140 + 90;
 
-      if (char === " ") base += 40;
+      if (char === " ") base += 50;
       if ([".", "!", "?"].includes(char)) base += 250;
       if (char === "\n") base += 300;
 
       return base;
     }
 
-    function playSoundVariant() {
+    function playSound() {
       if (!soundEnabled) return;
 
-      sound.playbackRate = Math.random() * 0.15 + 0.92;
-      sound.volume = Math.random() * 0.25 + 0.6;
       sound.currentTime = 0;
-      sound.play();
+      sound.volume = 1;
+      sound.playbackRate = Math.random() * 0.15 + 0.92;
+      sound.play().catch(() => {});
     }
 
     function type() {
@@ -225,88 +236,79 @@ Happy Birthday, Jan!`;
         const char = text.charAt(charIndex);
 
         el.textContent += char;
-        playSoundVariant();
+        playSound();
 
         charIndex++;
-        setTimeout(type, getRandomDelay(char));
+        setTimeout(type, getDelay(char));
       }
     }
 
-    setTimeout(type, 400 + Math.random() * 600);
+    setTimeout(type, 500);
   }
 
   // -----------------------------
   // COUNTDOWN
   // -----------------------------
-  const interval = setInterval(() => {
+  setInterval(() => {
     if (preview === "after") return;
 
     const now = new Date().getTime();
     const distance = targetDate - now;
 
     if (distance <= 0) {
-      clearInterval(interval);
       startAfterState(true);
       return;
     }
 
     if (preview === "before") return;
 
-    const hours = Math.floor(distance / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    const h = Math.floor(distance / 3600000);
+    const m = Math.floor((distance % 3600000) / 60000);
+    const s = Math.floor((distance % 60000) / 1000);
 
     document.getElementById("counter").textContent =
-      `${hours}h ${minutes}m ${seconds}s`;
+      `${h}h ${m}m ${s}s`;
   }, 1000);
 
   // -----------------------------
-  // CONFETTI
+  // CONFETTI (unchanged)
   // -----------------------------
   function startConfetti() {
     const canvas = document.getElementById("confetti");
     const ctx = canvas.getContext("2d");
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
 
-    const pieces = [];
+    const parts = [];
 
-    for (let i = 0; i < 150; i++) {
-      pieces.push({
+    for (let i = 0; i < 120; i++) {
+      parts.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height - canvas.height,
-        size: Math.random() * 8 + 4,
-        speed: Math.random() * 3 + 2,
-        angle: Math.random() * 360,
-        color: `hsl(${Math.random() * 360}, 70%, 60%)`
+        s: Math.random() * 6 + 3,
+        v: Math.random() * 3 + 2,
+        c: `hsl(${Math.random() * 360},70%,60%)`
       });
     }
 
-    let frame = 0;
+    let f = 0;
 
-    function update() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function anim() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      pieces.forEach(p => {
-        p.y += p.speed;
-        p.angle += 5;
-
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.angle * Math.PI / 180);
-        ctx.fillStyle = p.color;
-        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        ctx.restore();
+      parts.forEach(p => {
+        p.y += p.v;
+        ctx.fillStyle = p.c;
+        ctx.fillRect(p.x, p.y, p.s, p.s);
 
         if (p.y > canvas.height) p.y = -10;
       });
 
-      frame++;
-      if (frame < 300) requestAnimationFrame(update);
+      if (f++ < 250) requestAnimationFrame(anim);
     }
 
-    update();
+    anim();
   }
 
 </script>
