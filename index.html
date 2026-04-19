@@ -32,23 +32,41 @@
       font-family: 'Special Elite', monospace;
       font-size: 2em;
       border-right: 2px solid;
-      
-      white-space: pre-wrap; /* 👈 Fix für Leerzeichen + Zeilenumbrüche */
+      white-space: pre-wrap;
     }
 
     #counter {
       font-size: 3em;
       margin-top: 20px;
     }
+
+    /* Start-Overlay */
+    #startOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2em;
+      z-index: 10;
+      cursor: pointer;
+    }
   </style>
 </head>
 
 <body class="before">
 
+<div id="startOverlay">🔊 Klicken für Sound</div>
+
 <h1 id="headline"></h1>
 <div id="counter"></div>
 
-<audio id="typeSound" src="https://www.soundjay.com/mechanical/typewriter-key-1.mp3" preload="auto"></audio>
+<audio id="typeSound" src="typewriter.wav" preload="auto"></audio>
 
 <script>
   const targetDate = new Date("April 21, 2026 00:00:00").getTime();
@@ -63,9 +81,14 @@ Happy Birthday, Jan!`;
   let soundEnabled = false;
 
   const sound = document.getElementById("typeSound");
+  const overlay = document.getElementById("startOverlay");
 
-  document.body.addEventListener("click", () => {
+  // Klick zum Aktivieren von Sound + Start
+  overlay.addEventListener("click", () => {
     soundEnabled = true;
+    overlay.style.display = "none";
+
+    typeWriter(textBefore);
   }, { once: true });
 
   function typeWriter(text) {
@@ -108,8 +131,6 @@ Happy Birthday, Jan!`;
 
     setTimeout(type, 200 + Math.random() * 300);
   }
-
-  typeWriter(textBefore);
 
   const interval = setInterval(() => {
     const now = new Date().getTime();
