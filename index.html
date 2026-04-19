@@ -14,8 +14,9 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      transition: all 1s ease;
       font-family: Arial, sans-serif;
+      overflow: hidden;
+      transition: all 1s ease;
     }
 
     .before {
@@ -33,38 +34,58 @@
       font-size: 2em;
       border-right: 2px solid;
       white-space: pre-wrap;
+      z-index: 2;
     }
 
     #counter {
       font-size: 3em;
       margin-top: 20px;
+      z-index: 2;
     }
 
-    /* Start-Overlay */
-    #startOverlay {
+    canvas {
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* BOOT SCREEN */
+    #startOverlay {
+      position: fixed;
+      inset: 0;
       background: black;
-      color: white;
+      color: #00ff99;
+      font-family: monospace;
+      padding: 40px;
+      z-index: 20;
       display: flex;
+      flex-direction: column;
       justify-content: center;
-      align-items: center;
-      font-size: 2em;
-      z-index: 10;
+      gap: 10px;
       cursor: pointer;
+    }
+
+    .bootLine {
+      opacity: 0;
+      animation: fadeIn 0.6s forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
     }
   </style>
 </head>
 
 <body class="before">
 
-<div id="startOverlay">🔊 Klicken für Sound</div>
+<div id="startOverlay"></div>
 
 <h1 id="headline"></h1>
 <div id="counter"></div>
+
+<canvas id="confetti"></canvas>
 
 <audio id="typeSound" src="typewriter.wav" preload="auto"></audio>
 
@@ -83,25 +104,109 @@ Happy Birthday, Jan!`;
   const sound = document.getElementById("typeSound");
   const overlay = document.getElementById("startOverlay");
 
-  // Klick zum Aktivieren von Sound + Start
+  const params = new URLSearchParams(window.location.search);
+  const preview = params.get("preview");
+
+  // -----------------------------
+  // BOOT SCREEN (RANDOMIZED)
+  // -----------------------------
+  const bootLines = [
+    "Booting system...",
+    "Loading birthday module...",
+    "Checking timeline integrity...",
+    "Calibrating memory...",
+    "Final checks..."
+  ];
+
+  function buildBootScreen() {
+    overlay.innerHTML = "";
+
+    let delay = 0;
+
+    bootLines.forEach((line) => {
+      const div = document.createElement("div");
+      div.className = "bootLine";
+      div.textContent = line;
+
+      const randomDelay = delay + Math.random() * 600;
+      div.style.animationDelay = `${randomDelay}ms`;
+
+      delay += 600 + Math.random() * 800;
+
+      overlay.appendChild(div);
+    });
+
+    // "Click to continue" mit Zufallsverzögerung
+    const clickLine = document.createElement("div");
+    clickLine.className = "bootLine";
+    clickLine.textContent = "👉 Click to continue";
+    clickLine.style.color = "white";
+
+    clickLine.style.animationDelay = `${delay + 800 + Math.random() * 1200}ms`;
+
+    overlay.appendChild(clickLine);
+  }
+
+  buildBootScreen();
+
+  // -----------------------------
+  // START
+  // -----------------------------
   overlay.addEventListener("click", () => {
     soundEnabled = true;
     overlay.style.display = "none";
-
-    typeWriter(textBefore);
+    checkInitialState();
   }, { once: true });
 
+  // -----------------------------
+  // STATE
+  // -----------------------------
+  function startBeforeState() {
+    document.body.classList.remove("after");
+    document.body.classList.add("before");
+    typeWriter(textBefore);
+  }
+
+  function startAfterState(skipTyping = false) {
+    document.body.classList.remove("before");
+    document.body.classList.add("after");
+
+    document.getElementById("counter").textContent = "00:00:00";
+
+    if (skipTyping) {
+      document.getElementById("headline").textContent = textAfter;
+    } else {
+      typeWriter(textAfter);
+    }
+
+    startConfetti();
+  }
+
+  function checkInitialState() {
+    const now = new Date().getTime();
+    const distance = targetDate - now;
+
+    if (preview === "after") return startAfterState(true);
+    if (preview === "before") return startBeforeState();
+    if (distance <= 0) return startAfterState(true);
+
+    startBeforeState();
+  }
+
+  // -----------------------------
+  // TYPEWRITER (SLOW)
+  // -----------------------------
   function typeWriter(text) {
     const el = document.getElementById("headline");
     el.textContent = "";
     charIndex = 0;
 
     function getRandomDelay(char) {
-      let base = Math.random() * 70 + 40;
+      let base = Math.random() * 120 + 90; // bewusst langsamer
 
-      if (char === " ") base += 30;
-      if ([".", "!", "?"].includes(char)) base += 180;
-      if (char === "\n") base += 250;
+      if (char === " ") base += 40;
+      if ([".", "!", "?"].includes(char)) base += 250;
+      if (char === "\n") base += 300;
 
       return base;
     }
@@ -109,10 +214,8 @@ Happy Birthday, Jan!`;
     function playSoundVariant() {
       if (!soundEnabled) return;
 
-      const variation = Math.random() * 0.2 + 0.9;
-      sound.playbackRate = variation;
-      sound.volume = Math.random() * 0.3 + 0.7;
-
+      sound.playbackRate = Math.random() * 0.15 + 0.92;
+      sound.volume = Math.random() * 0.25 + 0.6;
       sound.currentTime = 0;
       sound.play();
     }
@@ -129,23 +232,25 @@ Happy Birthday, Jan!`;
       }
     }
 
-    setTimeout(type, 200 + Math.random() * 300);
+    setTimeout(type, 400 + Math.random() * 600);
   }
 
+  // -----------------------------
+  // COUNTDOWN
+  // -----------------------------
   const interval = setInterval(() => {
+    if (preview === "after") return;
+
     const now = new Date().getTime();
     const distance = targetDate - now;
 
     if (distance <= 0) {
       clearInterval(interval);
-
-      document.body.classList.remove("before");
-      document.body.classList.add("after");
-
-      typeWriter(textAfter);
-      document.getElementById("counter").textContent = "00:00:00";
+      startAfterState(true);
       return;
     }
+
+    if (preview === "before") return;
 
     const hours = Math.floor(distance / (1000 * 60 * 60));
     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -154,6 +259,56 @@ Happy Birthday, Jan!`;
     document.getElementById("counter").textContent =
       `${hours}h ${minutes}m ${seconds}s`;
   }, 1000);
+
+  // -----------------------------
+  // CONFETTI
+  // -----------------------------
+  function startConfetti() {
+    const canvas = document.getElementById("confetti");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const pieces = [];
+
+    for (let i = 0; i < 150; i++) {
+      pieces.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height - canvas.height,
+        size: Math.random() * 8 + 4,
+        speed: Math.random() * 3 + 2,
+        angle: Math.random() * 360,
+        color: `hsl(${Math.random() * 360}, 70%, 60%)`
+      });
+    }
+
+    let frame = 0;
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      pieces.forEach(p => {
+        p.y += p.speed;
+        p.angle += 5;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+        ctx.restore();
+
+        if (p.y > canvas.height) p.y = -10;
+      });
+
+      frame++;
+      if (frame < 300) requestAnimationFrame(update);
+    }
+
+    update();
+  }
+
 </script>
 
 </body>
